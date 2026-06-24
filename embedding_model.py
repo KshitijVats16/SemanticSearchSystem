@@ -48,3 +48,30 @@ class EmbeddingModel:
         )
 
         return self
+
+    def save(self) -> None:
+        with open(self._tfidf_path, "wb") as f:
+            pickle.dump(self.vectorizer, f)
+
+        with open(self._svd_path, "wb") as f:
+            pickle.dump(self.svd, f)
+
+        print(f"[embedding_model] Saved TF-IDF + SVD → {self.model_dir}")
+
+    def load(self) -> bool:
+        if not self._tfidf_path.exists() or not self._svd_path.exists():
+            return False
+
+        with open(self._tfidf_path, "rb") as f:
+            self.vectorizer = pickle.load(f)
+
+        with open(self._svd_path, "rb") as f:
+            self.svd = pickle.load(f)
+
+        self.dim = self.svd.n_components
+
+        print(
+            f"[embedding_model] Loaded TF-IDF + SVD (dim={self.dim}) from {self.model_dir}"
+        )
+
+        return True
