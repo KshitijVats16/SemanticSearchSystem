@@ -1,3 +1,18 @@
+import pickle
+from pathlib import Path
+from typing import List, Optional
+
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import normalize
+
+DEFAULT_DIM = 256
+MIN_DF = 2
+MAX_FEATURES = 50000
+MODEL_DIR = "cache_store"
+
+
 class EmbeddingModel:
     """
     TF-IDF + Truncated SVD (LSA) embedding model.
@@ -75,3 +90,25 @@ class EmbeddingModel:
         )
 
         return True
+
+    def embed(
+        self,
+        texts: List[str],
+        batch_size: int = 512,
+        show_progress: bool = True,
+    ) -> np.ndarray:
+        """
+        Transform texts into L2-normalised float32 embeddings.
+        """
+        assert self.vectorizer is not None and self.svd is not None, \
+            "Call fit() or load() before embed()."
+
+        tfidf = self.vectorizer.transform(texts)
+        vecs = self.svd.transform(tfidf)
+        vecs = normalize(vecs, norm="l2")
+
+        return vecs.astype(np.float32)
+
+    def embed_single(self, text: str) -> np.ndarray:
+        """Embed a single query."""
+        return self.embed([text], show_progress=False)[0]
