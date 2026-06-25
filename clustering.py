@@ -7,6 +7,10 @@ from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
 
+from logger_config import get_logger
+
+logger = get_logger(__name__)
+
 DEFAULT_CLUSTER_DIR = "cache_store"
 N_COMPONENTS_PCA = 50
 COVARIANCE_TYPE = "diag"
@@ -39,7 +43,7 @@ class FuzzyClusterer:
             embeddings.shape[0] - 1,
         )
 
-        print(f"Fitting PCA({actual_components})...")
+        logger.info(f"Fitting PCA({actual_components})")
 
         self.pca = PCA(
             n_components=actual_components,
@@ -48,8 +52,9 @@ class FuzzyClusterer:
 
         reduced = self.pca.fit_transform(embeddings)
 
-        print(
-            f"PCA variance retained: {self.pca.explained_variance_ratio_.sum()*100:.2f}%"
+        logger.info(
+            f"PCA variance retained: "
+            f"{self.pca.explained_variance_ratio_.sum()*100:.2f}%"
         )
 
         self.gmm = GaussianMixture(
@@ -59,7 +64,10 @@ class FuzzyClusterer:
             random_state=RANDOM_STATE,
         )
 
-        print("Training Gaussian Mixture Model...")
+        logger.info(
+            f"Training Gaussian Mixture Model with {self.n_clusters} clusters"
+        )
+
         self.gmm.fit(reduced)
 
         return self
@@ -89,13 +97,18 @@ class FuzzyClusterer:
         with open(self._pca_path, "wb") as f:
             pickle.dump(self.pca, f)
 
-        print("Cluster model saved.")
+        logger.info(
+            f"Cluster model saved to {self.cluster_dir}"
+        )
 
     def load(self):
         if (
             not self._gmm_path.exists()
             or not self._pca_path.exists()
         ):
+            logger.warning(
+                f"Cluster model not found in {self.cluster_dir}"
+            )
             return False
 
         with open(self._gmm_path, "rb") as f:
@@ -105,6 +118,11 @@ class FuzzyClusterer:
             self.pca = pickle.load(f)
 
         self.n_clusters = self.gmm.n_components
+
+        logger.info(
+            f"Loaded cluster model with {self.n_clusters} clusters"
+        )
+
         return True
 
 
@@ -132,6 +150,8 @@ def select_n_clusters(
         "bic": [],
         "silhouette": [],
     }
+
+    logger.info("Evaluating candidate cluster counts")
 
     print(f"{'K':>5}{'BIC':>15}{'Silhouette':>15}")
 
