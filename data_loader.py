@@ -15,6 +15,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -110,12 +113,10 @@ def load_dataset(data_dir: str, max_docs: Optional[int] = None) -> List[Document
             )
 
             if max_docs and len(docs) >= max_docs:
+                logger.info(f"Loaded {len(docs)} documents.")
                 return docs
 
-    print(
-        f"[data_loader] Loaded {len(docs)} documents from "
-        f"{len(set(d.category for d in docs))} categories."
-    )
+    logger.info(f"Loaded {len(docs)} documents.")
     return docs
 
 
