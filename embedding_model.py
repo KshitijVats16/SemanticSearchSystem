@@ -7,6 +7,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import normalize
 
+from logger_config import get_logger
+
+logger = get_logger(__name__)
+
 DEFAULT_DIM = 256
 MIN_DF = 2
 MAX_FEATURES = 50000
@@ -32,7 +36,7 @@ class EmbeddingModel:
         self.svd: Optional[TruncatedSVD] = None
 
     def fit(self, texts: List[str]) -> "EmbeddingModel":
-        print(f"[embedding_model] Fitting TF-IDF on {len(texts)} documents …")
+        logger.info(f"Fitting TF-IDF on {len(texts)} documents")
 
         self.vectorizer = TfidfVectorizer(
             min_df=MIN_DF,
@@ -43,7 +47,7 @@ class EmbeddingModel:
 
         tfidf_matrix = self.vectorizer.fit_transform(texts)
 
-        print(f"[embedding_model] TF-IDF shape: {tfidf_matrix.shape}")
+        logger.info(f"TF-IDF shape: {tfidf_matrix.shape}")
 
         actual_dim = min(self.dim, tfidf_matrix.shape[1] - 1)
 
@@ -58,8 +62,8 @@ class EmbeddingModel:
 
         explained = self.svd.explained_variance_ratio_.sum()
 
-        print(
-            f"[embedding_model] SVD explains {explained*100:.1f}% of variance. dim={self.dim}"
+        logger.info(
+            f"SVD explains {explained * 100:.1f}% of variance. dim={self.dim}"
         )
 
         return self
@@ -71,7 +75,7 @@ class EmbeddingModel:
         with open(self._svd_path, "wb") as f:
             pickle.dump(self.svd, f)
 
-        print(f"[embedding_model] Saved TF-IDF + SVD → {self.model_dir}")
+        logger.info(f"Saved TF-IDF + SVD to {self.model_dir}")
 
     def load(self):
         if not self._tfidf_path.exists() or not self._svd_path.exists():
@@ -85,15 +89,21 @@ class EmbeddingModel:
 
         self.dim = self.svd.n_components
 
-        print(
-            f"[embedding_model] Loaded TF-IDF + SVD (dim={self.dim}) from {self.model_dir}"
+        logger.info(
+            f"Loaded TF-IDF + SVD (dim={self.dim}) from {self.model_dir}"
         )
 
         return True
 
-    def embed(self, texts: List[str], batch_size: int = 512, show_progress: bool = True) -> np.ndarray:
-        assert self.vectorizer is not None and self.svd is not None, \
+    def embed(
+        self,
+        texts: List[str],
+        batch_size: int = 512,
+        show_progress: bool = True,
+    ) -> np.ndarray:
+        assert self.vectorizer is not None and self.svd is not None, (
             "Call fit() or load() before embed()."
+        )
 
         tfidf = self.vectorizer.transform(texts)
         vecs = self.svd.transform(tfidf)
